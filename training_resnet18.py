@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import os
 import time
 
 import torch
@@ -10,9 +11,11 @@ from torchvision import datasets, transforms
 import torchvision.transforms as transforms
 import timm
 
+init_model = None
 model: nn.Module = timm.create_model('resnet18', pretrained=False, num_classes=10)
 imsize = 32
 
+torch.manual_seed(0)
 device = torch_directml.device()
 model = model.to(device)
 
@@ -21,26 +24,34 @@ transform_train = transforms.Compose([
     transforms.Resize(imsize),
     transforms.RandomHorizontalFlip(),
     transforms.ToTensor(),
-    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
 ])
 
 transform_test = transforms.Compose([
     transforms.ToTensor(),
-    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
 ])
 
 trainset = datasets.CIFAR10(
     root='./data', train=True, download=True, transform=transform_train)
-trainloader = DataLoader(trainset, batch_size=256, shuffle=True)
+trainloader = DataLoader(trainset, batch_size=512, shuffle=True)
 
 testset = datasets.CIFAR10(
     root='./data', train=False, download=True, transform=transform_test)
-testloader = DataLoader(testset, batch_size=256, shuffle=False)
+testloader = DataLoader(testset, batch_size=512, shuffle=False)
 
 
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(), lr=0.001,
                       momentum=0.9, weight_decay=0.0001)
+
+if init_model is not None and os.path.exists(init_model):
+    checkpoint = torch.load(init_model)
+    model.load_state_dict(checkpoint['model_state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    init_epoch = checkpoint['epoch']
+else:
+    init_epoch = 0
 
 
 def train():
@@ -87,11 +98,20 @@ def test():
 
     return test_loss, correct / total
 
+if not os.path.exists('models'):
+    os.mkdir('models')
 
-for epoch in range(100):
+for epoch in range(init_epoch + 1, init_epoch + 101):
     t1 = time.time()
     train_loss, train_acc = train()
     test_loss, test_acc = test()
     t2 = time.time()
 
     print(f'Epoch: {epoch}, Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}, Test Loss: {test_loss:.4f}, Test Acc: {test_acc:.4f}, Time: {t2 - t1:.4f}s')
+
+    if epoch % 10 == 0:
+        torch.save({
+            "epoch": epoch,
+            "model_state_dict": model.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+        }, f"models/resnet18_{epoch}.pth")
