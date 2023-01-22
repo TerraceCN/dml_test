@@ -61,9 +61,13 @@ def train():
     total = 0
     inputs: torch.Tensor
     targets: torch.Tensor
-    for inputs, targets in trainloader:
+
+    total_batchs = len(trainloader)
+    for i, (inputs, targets) in enumerate(trainloader):
+        t1 = time.time()
         inputs, targets = inputs.to(device), targets.to(device)
         outputs: torch.Tensor = model(inputs)
+        t2 = time.time()
 
         loss: torch.Tensor = criterion(outputs, targets)
         loss.backward()
@@ -75,6 +79,9 @@ def train():
         total += targets.size(0)
         correct += predicted.eq(targets).sum().item()
 
+        print(f"Batch: {i+1}/{total_batchs}, Loss: {loss.item():.4f}, Time: {t2 - t1:.4f}s", end="\r")
+    print()
+    
     return train_loss, correct / total
 
 
@@ -107,7 +114,11 @@ for epoch in range(init_epoch + 1, init_epoch + 101):
     test_loss, test_acc = test()
     t2 = time.time()
 
-    print(f'Epoch: {epoch}, Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}, Test Loss: {test_loss:.4f}, Test Acc: {test_acc:.4f}, Time: {t2 - t1:.4f}s')
+    print("--------------------")
+    print(f"Epoch: {epoch}, Time: {t2 - t1:.4f}s")
+    print(f"Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}")
+    print(f"Test Loss: {test_loss:.4f}, Test Acc: {test_acc:.4f}")
+    print("--------------------")
 
     if epoch % 10 == 0:
         torch.save({
