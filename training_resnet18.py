@@ -117,7 +117,7 @@ for epoch in range(init_epoch + 1, init_epoch + 101):
     print("--------------------")
     print(f"Epoch: {epoch}, Time: {t2 - t1:.4f}s")
     print(f"Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}")
-    print(f"Test Loss: {test_loss:.4f}, Test Acc: {test_acc:.4f}")
+    print(f" Test Loss: {test_loss:.4f},  Test Acc: {test_acc:.4f}")
     print("--------------------")
 
     if epoch % 10 == 0:
