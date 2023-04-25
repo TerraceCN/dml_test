@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import argparse
 import time
 from typing import Literal
 
@@ -36,24 +37,33 @@ def inference(model_name: str, model: nn.Module, device_name: str, device: torch
     return np.concatenate(result, axis=0)
 
 
-print("\n========== ResNet50 inference ==========")
-resnet50 = timm.create_model("resnet50", pretrained=True)
-cpu_result = inference("ResNet50", resnet50, "CPU", torch.device("cpu"), iterations=1)
-directml_result = inference("ResNet50", resnet50, "DirectML", torch_directml.device())
-if np.allclose(cpu_result, directml_result, atol=1e-3):
-    print("========== PASSED ==========")
-else:
-    print("========== FAILED ==========")
+parser = argparse.ArgumentParser(prog="DirectML Inference Test")
 
-print("\n========== ViT inference ==========")
-vit = timm.create_model("vit_base_patch16_224", pretrained=True)
-cpu_result = inference("ViT", vit, "CPU", torch.device("cpu"), iterations=1)
-directml_result = inference("ViT", vit, "DirectML", torch_directml.device())
-if np.allclose(cpu_result, directml_result, atol=1e-3):
-    print("========== PASSED ==========")
-else:
-    print("========== FAILED ==========")
+parser.add_argument('--fp32', action='store_true', help='Run FP32 inference')
+parser.add_argument('--fp16', action='store_true', help='Run FP16 inference')
 
-print("\n========== FP16 inference ==========")
-inference("ResNet50", resnet50, "DirectML", torch_directml.device(), precision="FP16")
-inference("ViT", vit, "DirectML", torch_directml.device(), precision="FP16")
+args = parser.parse_args()
+
+if args.fp32:
+    print("\n========== ResNet50 inference ==========")
+    resnet50 = timm.create_model("resnet50", pretrained=True)
+    cpu_result = inference("ResNet50", resnet50, "CPU", torch.device("cpu"), iterations=1)
+    directml_result = inference("ResNet50", resnet50, "DirectML", torch_directml.device())
+    if np.allclose(cpu_result, directml_result, atol=1e-3):
+        print("========== PASSED ==========")
+    else:
+        print("========== FAILED ==========")
+
+    print("\n========== ViT inference ==========")
+    vit = timm.create_model("vit_base_patch16_224", pretrained=True)
+    cpu_result = inference("ViT", vit, "CPU", torch.device("cpu"), iterations=1)
+    directml_result = inference("ViT", vit, "DirectML", torch_directml.device())
+    if np.allclose(cpu_result, directml_result, atol=1e-3):
+        print("========== PASSED ==========")
+    else:
+        print("========== FAILED ==========")
+
+if args.fp16:
+    print("\n========== FP16 inference ==========")
+    inference("ResNet50", resnet50, "DirectML", torch_directml.device(), precision="FP16")
+    inference("ViT", vit, "DirectML", torch_directml.device(), precision="FP16")
